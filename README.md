@@ -8,7 +8,7 @@ Trion is meant to be headless CMS with access to content available via API.
 	- [REST vs GraphQL](#rest-vs-graphql)
 	- [Content model and planned API endpoints](#content-model-and-planned-api-endpoints)
 		- [Projects](#projects)
-	- [Basic content container: Trion](#basic-content-container-trion)
+	        - [Basic content container: Trion](#basic-content-container-trion)
 		- [Defining Trions](#defining-trions)
 		- [Trion entries](#trion-entries)
 - [Trivia](#trivia)
@@ -48,7 +48,7 @@ GET     /:project            # retrieve specific project info
 PUT     /:project            # update some of specific project data
 ```
 
-### Basic content container: Trion
+#### Basic content container: Trion
 
 A basic content container is named here ['Trion'](#where-did-the-name-trion-come-from). It is meant as a container for single instance of specific content model (e.g. instance of article, post or comment is considered to be trion).
 
