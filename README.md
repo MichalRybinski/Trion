@@ -45,8 +45,8 @@ Planned Endpoints:
 GET     /projects            # get a list of projects
 POST    /projects            # create a project
 DELETE  /projects/:project   # delete a project
-GET     /:project            # retrieve specific project info
-PUT     /:project            # update some of specific project data
+GET     /projects/:project   # retrieve specific project info
+PUT     /projects/:project   # update some of specific project data
 ```
 
 ### Basic content container: Trion
@@ -78,7 +78,7 @@ In definition update/delete scenario: For fetching, a response should contain so
 
 Planned Endpoints:
 ```
-GET     /:project/trions        # list trions defined so far in :project
+GET     /:project/trions        # list Trions definitions so far in :project
 POST    /:project/trions        # create new Trion definition. JSON Schema in payload.
 GET     /:project/trions/:trion # Retrieve specific Trion definition (JSON Schema)
 PUT     /:project/trions/:trion # update specific Trion definition. JSON Schema in payload.
