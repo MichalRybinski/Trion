@@ -120,3 +120,8 @@ Since the trigger for this project was to deliver brand new, shining CMS adapted
 In his non-fiction work of philosophy, 'Dialogs' (1957, English translation: Frank Prengel) mr Lem foresaw the creation of global network. He lived long enough to see that prediction to come to live and commented on it:
 
 > Until I used the Internet I wasn't aware, that there are so many idiots in the world
+
+
+
+
+Markdown ToC thanks to: https://magnetikonline.github.io/markdown-toc-generate/ 
