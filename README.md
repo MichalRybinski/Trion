@@ -1,6 +1,19 @@
-# Trion
+Trion
+=====
 
 Trion is meant to be headless CMS with access to content available via API.
+
+- [API concept](#api-concept)
+	- [node.js + express.js](#nodejs--expressjs)
+	- [REST vs GraphQL](#rest-vs-graphql)
+	- [Content model and planned API endpoints](#content-model-and-planned-api-endpoints)
+		- [Projects](#projects)
+	- [Basic content container: Trion](#basic-content-container-trion)
+		- [Defining Trions](#defining-trions)
+		- [Trion entries](#trion-entries)
+- [Trivia](#trivia)
+	- [Where did the name Trion come from?](#where-did-the-name-trion-come-from)
+	- [Fun fact](#fun-fact)
 
 ## API concept
 
