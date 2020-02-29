@@ -60,13 +60,13 @@ Trions are defined and used in a context of [Project](#projects).
 
 Defining a Trion (specific content container model) is done via means of JSON Schema (TODO: draftv4 or v6?).
 
-**Consideration**: JSON schema parsing and validation may still cost significant time and negatively impact API performance.
+*Consideration*: JSON schema parsing and validation may still cost significant time and negatively impact API performance.
 
 *Assessment*: JSON Schema definition of Trion can be easily re-used for API-level validation of payload when manipulating Trion entries and, though complex, gives a great flexibility in content modeling. Validity and stability of content entries delivered and read seems to be prevailing over potential performance loss, especially given the fact that the latter may be mitigated to some extent by resource scaling or/and code optimizations.
 
 *TODOS*: Deliver some pre-defined JSON Schemas for more complex Trions, like Rich Text Format, which can be easily reused as a part of the project.
 
-**Consideration**: Updating or deleting Trion definition while some Trion entries are already existing may cause all kinds of validation related problems, when fetching/updating these Trion entries.
+*Consideration*: Updating or deleting Trion definition while some Trion entries are already existing may cause all kinds of validation related problems, when fetching/updating these Trion entries.
 
 *Assessment*: This scnearios may occur through a lifetime of a Project, therefore any handling should focus on
 - not deleting/loosing accidentally data (existing Trion entries)
@@ -114,7 +114,7 @@ DELETE  /:project/:trion/:id    # Delete specific :trion entry
 
 ## Where did the name Trion come from?
 
-The term 'trion' is taken in the meaning described in a book by [Stanisław Lem](https://en.wikipedia.org/wiki/Stanis%C5%82aw_Lem), titled 'The Magellanic Cloud' (1955). The single trion is a crystallic content container, which can store not only text and images, which can be easily displayed upon request, but also voice and music and even scents. A collection of trions ('Trion Library') was a unimagineably huge database, to which all members of society had direct and instant access and could search for and consume the content. This is the basic function of Internet nowadays for many of it's users, though we're still waiting for the format for the scent ;-)
+The term 'trion' is taken in the meaning described in a book by [Stanisław Lem](https://en.wikipedia.org/wiki/Stanis%C5%82aw_Lem), titled 'The Magellanic Cloud' (1955). The single trion is a crystallic content container, which can store not only text and images, that could be easily displayed upon request, but also voice and music and even scents. A collection of trions ('Trion Library') was a unimagineably huge database, to which all members of society had direct and instant access and could search for and consume the content. This is the basic function of Internet nowadays for many of it's users, though we're still waiting for the format for the scent ;-)
 
 Since the trigger for this project was to deliver brand new, shining CMS adapted to specific and constantly shifting needs of science fiction/fiction/fantasy community site, the project and [basic content container](#basic-content-container-trion) has been named after the 'trion'.
 
