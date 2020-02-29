@@ -17,10 +17,8 @@ Trion is meant to be headless CMS with access to content available via API.
 
 
 # API concept
-=============
 
 ## node.js + express.js
-=======================
 
 Due to initial assumptions for the project:
 
@@ -31,12 +29,10 @@ Due to initial assumptions for the project:
  an educated-guess decision was to use express.js + node.js combo as a API backend due to it's reported performance, popularity and thus availability of learning materials, ease of development and available free hosting options.
 
 ## REST vs GraphQL
-==================
 
 Assuming a lot of content will be served in the end as static pages and multiple requests and responses may be simply repeating, utilizing network caching capabilities seem to be more valuable than preventing over- and underfetching. This translates to REST API, at least for now. Over time, if internal optimization/caching mechanisms are built, a switch towards GraphQL may be reconsidered.
 
 ## Content model and planned API endpoints
-===========================================
 
 ![content hierarchy concept](https://raw.githubusercontent.com/MichalRybinski/Trion/master/documentation/res/TrionCMS.png "Content hierarchy concept")
 
@@ -112,18 +108,17 @@ PUT     /:project/:trion/:id    # Update specific :trion entry.
 DELETE  /:project/:trion/:id    # Delete specific :trion entry
 ```
 
+---
+
 # Trivia
-========
 
 ## Where did the name Trion come from?
-======================================
 
 The term 'trion' is taken in the meaning described in a book by [Stanisław Lem](https://en.wikipedia.org/wiki/Stanis%C5%82aw_Lem), titled 'The Magellanic Cloud' (1955). The single trion is a crystallic content container, which can store not only text and images, which can be easily displayed upon request, but also voice and music and even scents. A collection of trions ('Trion Library') was a unimagineably huge database, to which all members of society had direct and instant access and could search for and consume the content. This is the basic function of Internet nowadays for many of it's users, though we're still waiting for the format for the scent ;-)
 
 Since the trigger for this project was to deliver brand new, shining CMS adapted to specific and constantly shifting needs of science fiction/fiction/fantasy community site, the project and [basic content container](#basic-content-container-trion) has been named after the 'trion'.
 
 ## Fun fact
-===========
 
 In his non-fiction work of philosophy, 'Dialogs' (1957, English translation: Frank Prengel) mr Lem foresaw the creation of global network. He lived long enough to see that prediction to come to live and commented on it:
 
@@ -131,5 +126,5 @@ In his non-fiction work of philosophy, 'Dialogs' (1957, English translation: Fra
 
 
 
-
+---
 Markdown ToC thanks to: https://magnetikonline.github.io/markdown-toc-generate/ 
