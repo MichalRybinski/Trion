@@ -4,21 +4,23 @@ Trion
 Trion is meant to be headless CMS with access to content available via API.
 
 - [API concept](#api-concept)
-	- [node.js + express.js](#nodejs--expressjs)
-	- [REST vs GraphQL](#rest-vs-graphql)
-	- [Content model and planned API endpoints](#content-model-and-planned-api-endpoints)
-		- [Projects](#projects)
-		- [Basic content container: Trion](#basic-content-container-trion)
-		- [Defining Trions](#defining-trions)
-		- [Trion entries](#trion-entries)
+  - [node.js + express.js](#nodejs--expressjs)
+  - [REST vs GraphQL](#rest-vs-graphql)
+  - [Content model and planned API endpoints](#content-model-and-planned-api-endpoints)
+    - [Projects](#projects)
+    - [Basic content container: Trion](#basic-content-container-trion)
+      - [Defining Trions](#defining-trions)
+      - [Trion entries](#trion-entries)
 - [Trivia](#trivia)
-	- [Where did the name Trion come from?](#where-did-the-name-trion-come-from)
-	- [Fun fact](#fun-fact)
+  - [Where did the name Trion come from?](#where-did-the-name-trion-come-from)
+  - [Fun fact](#fun-fact)
 
 
-## API concept
+# API concept
+=============
 
-### node.js + express.js
+## node.js + express.js
+=======================
 
 Due to initial assumptions for the project:
 
@@ -28,15 +30,17 @@ Due to initial assumptions for the project:
 
  an educated-guess decision was to use express.js + node.js combo as a API backend due to it's reported performance, popularity and thus availability of learning materials, ease of development and available free hosting options.
 
-### REST vs GraphQL
+## REST vs GraphQL
+==================
 
 Assuming a lot of content will be served in the end as static pages and multiple requests and responses may be simply repeating, utilizing network caching capabilities seem to be more valuable than preventing over- and underfetching. This translates to REST API, at least for now. Over time, if internal optimization/caching mechanisms are built, a switch towards GraphQL may be reconsidered.
 
-### Content model and planned API endpoints
+## Content model and planned API endpoints
+===========================================
 
 ![content hierarchy concept](https://raw.githubusercontent.com/MichalRybinski/Trion/master/documentation/res/TrionCMS.png "Content hierarchy concept")
 
-#### Projects
+### Projects
 
 The system is meant to support content CRUD for multiple projects within one deployment. It serves purpose to be extensible for much larger tool than it is now w/o large architectural change.
 
@@ -49,7 +53,7 @@ GET     /:project            # retrieve specific project info
 PUT     /:project            # update some of specific project data
 ```
 
-#### Basic content container: Trion
+### Basic content container: Trion
 
 A basic content container is named here ['Trion'](#where-did-the-name-trion-come-from). It is meant as a container for single instance of specific content model (e.g. instance of article, post or comment is considered to be trion).
 
@@ -108,15 +112,18 @@ PUT     /:project/:trion/:id    # Update specific :trion entry.
 DELETE  /:project/:trion/:id    # Delete specific :trion entry
 ```
 
-## Trivia
+# Trivia
+========
 
-### Where did the name Trion come from?
+## Where did the name Trion come from?
+======================================
 
 The term 'trion' is taken in the meaning described in a book by [Stanisław Lem](https://en.wikipedia.org/wiki/Stanis%C5%82aw_Lem), titled 'The Magellanic Cloud' (1955). The single trion is a crystallic content container, which can store not only text and images, which can be easily displayed upon request, but also voice and music and even scents. A collection of trions ('Trion Library') was a unimagineably huge database, to which all members of society had direct and instant access and could search for and consume the content. This is the basic function of Internet nowadays for many of it's users, though we're still waiting for the format for the scent ;-)
 
 Since the trigger for this project was to deliver brand new, shining CMS adapted to specific and constantly shifting needs of science fiction/fiction/fantasy community site, the project and [basic content container](#basic-content-container-trion) has been named after the 'trion'.
 
-### Fun fact
+## Fun fact
+===========
 
 In his non-fiction work of philosophy, 'Dialogs' (1957, English translation: Frank Prengel) mr Lem foresaw the creation of global network. He lived long enough to see that prediction to come to live and commented on it:
 
