@@ -3,7 +3,7 @@ var express = require('express'),
 // if you want to access params from the parent router
     router = express.Router({mergeParams: true}),
     project = require('./projects/project')
-    db = require('../../dummy-data/sysdb'),
+    db = require('./dummy-data/sysdb'),
     sysdb = db.sysdb;
 
 router.route('/')               // Add a binding to handle '/projects'

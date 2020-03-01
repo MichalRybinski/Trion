@@ -2,7 +2,7 @@ const express = require('express')
 const app = express()
 const port = 3000
 var projects = require('./routes/api/projects')
-var project = require('./routes/api/projects/project')
+var project = require('./nodejs_experiment/routes/api/projects/project')
 
 
 app.use('/projects',projects)

@@ -1,6 +1,6 @@
 var express = require('express'),
     router = express.Router({mergeParams: true}),
-    db = require('../../../dummy-data/sysdb');
+    db = require('./dummy-data/sysdb');
     sysdb = db.sysdb;
     const IndexNotFound = -1
 
