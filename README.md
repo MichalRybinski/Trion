@@ -18,7 +18,7 @@ Trion is meant to be headless CMS with access to content available via API.
 
 # API concept
 
-## node.js + express.js
+## node.js + express.js or go/go+framework?
 
 Due to initial assumptions for the project:
 
@@ -26,7 +26,7 @@ Due to initial assumptions for the project:
  - performance for large amount of requests
  - popular & free to use framework in order to enable quick contributions and cooperation with multiple types of databases
 
- an educated-guess decision was to use express.js + node.js combo as a API backend due to it's reported performance, popularity and thus availability of learning materials, ease of development and available free hosting options.
+ an educated-guess decision was to use express.js + node.js combo as a API backend due to it's reported performance, popularity and thus availability of learning materials, ease of development and available free hosting options. Also a counter experiment with Go+Iris (due to it's performance and said ease to use) is to be executed, though free hosting options are limited to Heroku and Google App Engine. However Go compiles to executable, is fricking fast and requires lesst memory during runtime, gox cross-compiler is available for various platforms and cpu architectures.
 
 ## REST vs GraphQL
 
