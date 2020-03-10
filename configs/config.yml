@@ -1,0 +1,13 @@
+# server config
+server:
+  host: "localhost"
+  port: 3000
+
+# database config
+db:
+  type: "mongodb"
+  mongoConfig:
+            # full endpoint: address + port
+    URL: "mongodb://127.0.0.1:27017"
+    ProjectsDBName: "Projects"
+    SchemasDBName: "Schemas"

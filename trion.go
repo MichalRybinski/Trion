@@ -1,7 +1,7 @@
 package main
 
 import (
-	//"fmt"
+	"fmt"
 	//"time"
 
 	//mgo "gopkg.in/mgo.v2"
@@ -13,6 +13,7 @@ import (
 	//"github.com/kataras/iris/middleware/recover"
 	//"Trion/repository"
 	"github.com/MichalRybinski/Trion/API"
+	"github.com/MichalRybinski/Trion/common"
 )
 
 const notFoundHTML = "<h1> custom http error page </h1>"
@@ -88,6 +89,8 @@ func h(ctx iris.Context) {
 
 func main() {
 	app := newApp()
+	appConfig := common.NewAppConfig(common.YmlConfFile)
+	fmt.Println("%v",appConfig)
 	app.Logger().SetLevel("debug")
-	app.Run(iris.Addr(":3000"), iris.WithoutServerError(iris.ErrServerClosed))
+	app.Run(iris.Addr(":" + appConfig.ServerConfig.PORT), iris.WithoutServerError(iris.ErrServerClosed))
 }
