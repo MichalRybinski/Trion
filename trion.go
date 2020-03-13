@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	//"fmt"
 	//"time"
 
 	//mgo "gopkg.in/mgo.v2"
@@ -14,6 +14,11 @@ import (
 	//"Trion/repository"
 	"github.com/MichalRybinski/Trion/API"
 	"github.com/MichalRybinski/Trion/common"
+	"github.com/MichalRybinski/Trion/repository"
+	"context"
+	"log"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const notFoundHTML = "<h1> custom http error page </h1>"
@@ -29,20 +34,24 @@ func registerApiRoutes(app *iris.Application) {
 	apiMiddleware := func(ctx iris.Context) {
 		ctx.Next()
 	}
-    ps := API.NewProjectService()
+    
 	// party is just a group of routes with the same prefix
 	// and middleware, i.e: "/api" and apiMiddleware.
 	api := app.Party("/api", apiMiddleware)
 	{ // braces are optional of course, it's just a style of code
 		v1 := api.Party("/v1")
-
 		projects := v1.Party("/projects")
 		{
-			projects.Get("/", h)
-			projects.Post("/", ps.Save)
-			projects.Get("/{project:string}", h)
-			projects.Put("/{project:string}", h)
-			projects.Delete("/{project:string}", h)
+			//if common.ThisAppConfig.DBConfig.DBType =="mongodb" { 
+				pss:=repository.NewProjectStoreService(repository.MongoDBHandler.MongoProjectsDB)
+			// } else { //psql
+			// } 
+			psHandler := API.NewProjectService(pss)
+			projects.Get("/", psHandler.GetAll)
+			projects.Post("/", psHandler.Create)
+			//projects.Get("/{project:string}", h)
+			//projects.Put("/{project:string}", h)
+			//projects.Delete("/{project:string}", h)
 		}
 	}
 }
@@ -52,9 +61,9 @@ func registerSubdomains(app *iris.Application) {
 	// http://mysubdomain.myhost.com
 	mysubdomain.Get("/", h)
 
-	willdcardSubdomain := app.Party("*.")
-	willdcardSubdomain.Get("/", h)
-	willdcardSubdomain.Party("/party").Get("/", h)
+	//willdcardSubdomain := app.Party("*.")
+	//willdcardSubdomain.Get("/", h)
+	//willdcardSubdomain.Party("/party").Get("/", h)
 }
 
 func newApp() *iris.Application {
@@ -63,7 +72,7 @@ func newApp() *iris.Application {
 	registerApiRoutes(app)
 	registerSubdomains(app)
 
-	app.Handle("GET", "/healthcheck", h)
+	//app.Handle("GET", "/healthcheck", h)
 
 	return app
 }
@@ -87,10 +96,30 @@ func h(ctx iris.Context) {
 	ctx.Writef("Method: %s\nSubdomain: %s\nPath: %s\nParameters length: %d", method, subdomain, path, paramsLen)
 }
 
+
 func main() {
+	switch common.ThisAppConfig.DBConfig.DBType {
+		case "mongodb": {
+			var err error
+			//initiate client & connection, connection pool handled by driver
+			//keep it active until program is terminated
+			repository.MongoDBHandler.MongoClientOptions = options.Client().ApplyURI(common.ThisAppConfig.DBConfig.MongoConfig.URL)
+			repository.MongoDBHandler.MongoClient, err = mongo.Connect(context.Background(), 
+				repository.MongoDBHandler.MongoClientOptions)
+			if err != nil {
+				log.Fatal(err)
+			}
+			err = repository.MongoDBHandler.MongoClient.Ping(context.Background(), nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer repository.MongoDBHandler.MongoClient.Disconnect(context.TODO())
+			repository.MongoDBHandler.MongoDBInit(common.ThisAppConfig)
+		}
+		default:
+	}
 	app := newApp()
-	appConfig := common.NewAppConfig(common.YmlConfFile)
-	fmt.Println("%v",appConfig)
 	app.Logger().SetLevel("debug")
-	app.Run(iris.Addr(":" + appConfig.ServerConfig.PORT), iris.WithoutServerError(iris.ErrServerClosed))
+	app.Run(iris.Addr(":" + common.ThisAppConfig.ServerConfig.PORT), 
+		iris.WithoutServerError(iris.ErrServerClosed))
 }

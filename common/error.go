@@ -65,7 +65,7 @@ func RuntimeCallerStack() (s string) {
 
 // HTTPError describes an HTTP error.
 type HTTPError struct {
-	error
+	error `json:"-"`
 	Stack       string    `json:"-"` // the whole stacktrace.
 	//TODO: wrap HTTPError in general error struct, as it's not safe to release call stack as API response e.g. via failJSON
 	CallerStack string    `json:"-"` // the caller, file:lineNumber
@@ -74,7 +74,7 @@ type HTTPError struct {
 	StatusCode int `json:"statusCode"`
 	// could be named as "reason" as well
 	//  it's the message of the error.
-	Description string `json:"description"`
+	Details *json.RawMessage `json:"details,ommitempty"`
 }
 
 func (err HTTPError) writeHeaders(ctx iris.Context) {
@@ -91,14 +91,15 @@ func newError(statusCode int, err error, format string, args ...interface{}) HTT
 	if err == nil {
 		err = errors.New(desc)
 	}
-
+	details := PrepJSONRawMsg(desc)
+	
 	return HTTPError{
 		err,
 		string(debug.Stack()),
 		RuntimeCallerStack(),
 		time.Now(),
 		statusCode,
-		desc,
+		details,
 	}
 }
 
@@ -116,7 +117,8 @@ func LogFailure(logger io.Writer, ctx iris.Context, err HTTPError) {
 func Fail(ctx iris.Context, statusCode int, err error, format string, args ...interface{}) HTTPError {
 	httpErr := newError(statusCode, err, format, args...)
 	httpErr.writeHeaders(ctx)
-	ctx.WriteString(httpErr.Description)
+	errD, _ := httpErr.Details.MarshalJSON()
+	ctx.WriteString(string(errD))
 	return httpErr
 }
 
@@ -124,7 +126,10 @@ func Fail(ctx iris.Context, statusCode int, err error, format string, args ...in
 // Meant for API error responses.
 func FailJSON(ctx iris.Context, statusCode int, err error, format string, args ...interface{}) HTTPError {
 	httpErr := newError(statusCode, err, format, args...)
+	errD, _ := httpErr.Details.MarshalJSON()
+	fmt.Println(string(errD))
 	httpErr.writeHeaders(ctx)
+	fmt.Println("FailJSON: before ctx.JSON")
 	ctx.JSON(httpErr)
 	return httpErr
 }
@@ -140,4 +145,17 @@ func InternalServerError(ctx iris.Context, err error, format string, args ...int
 // Useful for APIs.
 func InternalServerErrorJSON(ctx iris.Context, err error, format string, args ...interface{}) {
 	LogFailure(os.Stderr, ctx, FailJSON(ctx, iris.StatusInternalServerError, err, format, args...))
+}
+
+
+// bad request after validating payload response helper
+func BadRequestAfterJSchemaValidationResponse(ctx iris.Context, result *gojsonschema.Result) {
+	httpErr := FailJSON(ctx,iris.StatusBadRequest,fmt.Errorf("Invalid request structure"),"%s",JSONSchemaValidationErrorsToString(result))
+	LogFailure(os.Stderr, ctx, httpErr)
+}
+
+//general bad request after some error
+func BadRequestAfterErrorResponse(ctx iris.Context, err error) {
+	httpErr := FailJSON(ctx,iris.StatusBadRequest,err,"%v",err.Error())
+	LogFailure(os.Stderr, ctx, httpErr)
 }

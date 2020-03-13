@@ -3,7 +3,7 @@ package common
 import (
   "github.com/ilyakaznacheev/cleanenv"
   //"github.com/hjson/hjson-go"
-  "fmt"
+  //"fmt"
   //"os"
   //"io/ioutil"
 )
@@ -20,18 +20,19 @@ type AppConfig struct {
 		DBType string `yaml:"type" env:"TRION_DB_SRV" env-upd`
 		MongoConfig struct {
 			URL string			`yaml:"URL" env:"TRION_DB_URL" env-upd`
-			ProjectsDB string	`yaml:"ProjectsDBName" env:"TRION_PROJECTS_DB" env-upd`
-			SchemasDB string	`yaml:"SchemasDBName"  env:"TRION_SCHEMAS_DB" env-upd`
+			ProjectsColl string	`yaml:"ProjectsColl" env:"TRION_PROJECTS_COLL" env-upd`
+			SchemasColl string	`yaml:"SchemasColl"  env:"TRION_SCHEMAS_COLL" env-upd`
 		} `yaml:"mongoConfig"`
 	} `yaml:"db"`
 }
+
+//global AppConfig var
+var ThisAppConfig = NewAppConfig(YmlConfFile)
 
 func NewAppConfig(confFilePath string) *AppConfig {
 	var AppC AppConfig
     err := cleanenv.ReadConfig(confFilePath, &AppC)
     if err != nil { panic(err) }
-	//fmt.Println("AppC.DB.Type %v", AppC.DB.Type)
-	fmt.Println("AppC.DBConfig.MongoConfig.URL %v",AppC.DBConfig.MongoConfig.URL)
 	return &AppC
 }
 //TODO update method

@@ -1,26 +1,25 @@
 package schemas
 
+const ProjectJSchemaVersion int = 1
 const ProjectJSchema string =`{
     "$schema": "http://json-schema.org/draft-07/schema",
     "$id": "http://example.com/example.json",
     "type": "object",
     "title": "The Project Schema",
     "description": "The basic Project JSON Schema",
-    "required": [
-        "name",
-        "type"
-    ],
+    "propertyNames": {
+    	"enum": ["_id", "name","type","schema_rev"]
+  	},
     "properties": {
-        "id": {
-            "$id": "#/properties/id",
+        "_id": {
+            "$id": "#/properties/_id",
             "type": "string",
             "title": "The Id Schema",
             "description": "An UUID for single Project instance",
             "default": "",
             "examples": [
                 "00b46e01-3994-4ac2-939e-2d5052a65961"
-            ],
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            ]
         },
         "name": {
             "$id": "#/properties/name",
@@ -50,5 +49,41 @@ const ProjectJSchema string =`{
             "title": "The project schema revision/version for last update timestamp",
             "default": 1
         }
-    }
+    },
+    "anyOf": [
+      {
+        "required" : ["_id","name"]
+      },
+      {
+        "required" : ["type","name"]
+      }
+    ]
+}`
+
+const ProjectFilterJSchema = `{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "http://example.com/example.json",
+    "type": "object",
+    "title": "The Project Filter Schema",
+    "description": "The basic Project Filter JSON Schema",
+    "propertyNames": {
+    	"enum": ["filter"]
+    },
+    "properties": {
+        "filter": {
+            "$id": "#/properties/filter",
+            "type": "object",
+            "title": "The Filter Schema",
+            "description": "Filter for filterin projects",
+            "default": "",
+            "examples": [
+                {
+                    "type" : {
+                        "$in" : [ "customer", "corporate"]
+                    }
+                }
+            ]
+        }
+    },
+    "required" : [ "filter" ]
 }`

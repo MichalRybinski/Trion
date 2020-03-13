@@ -5,6 +5,7 @@ import (
 	"os"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 func ReadJsonToString(filepath string) (jsonString string) {
@@ -24,7 +25,15 @@ func ReadJsonToString(filepath string) (jsonString string) {
 	return jsonString
 }
 
-type PostItemResponse struct {
-	Success bool `json:"success"`
+// make sure 'desc' won't cause rawMessage marshalling errors
+// we want always an object or table of strings in 'details'
+func PrepJSONRawMsg(desc string) *json.RawMessage {
+	var details json.RawMessage
+	if (strings.HasPrefix(desc, "{") || strings.HasPrefix(desc, "[") ) {
+		details = json.RawMessage(desc)
+	} else {
+		msg, _ := json.Marshal([]string {desc})
+		details = json.RawMessage(string(msg))
+	}
+	return &details
 }
-
