@@ -3,6 +3,7 @@ package API
 import (
 	"os"
 	"github.com/kataras/iris/v12"
+	//"github.com/kataras/iris/v12/hero"
 	//"github.com/kataras/iris/context"
 	
 	"github.com/xeipuuv/gojsonschema"
@@ -75,6 +76,7 @@ func (p *ProjectService) GetAll(ctx iris.Context) {
 	Filtering for content-type : application/json only.
 	1. Detect if header declares content-type application/json
 	2. If yes - parse json. If not - don't, empty filter.
+	request payload:
 	{
 		"filter" : {our filter json}
 	}
@@ -112,3 +114,24 @@ func (p *ProjectService) GetAll(ctx iris.Context) {
 	common.StatusJSON(ctx,iris.StatusOK,"%v",common.SliceMapToJSONString(itemsMap))
 	return
 }
+
+func (p *ProjectService) DeleteById(ctx iris.Context, id string) {
+	
+	fmt.Println(" => API.DeleteById! id: %s",id)
+	var filter = map[string]interface{}{ "_id" : id }
+	fmt.Println(" => API.DeleteById! filter: %s",filter)
+	itemsMap, err := p.PSS.Delete(nil, filter)
+	fmt.Println(itemsMap)
+	fmt.Println(err)
+	if err != nil {
+		if _, ok := err.(common.InvalidIdError); ok {
+			common.BadRequestAfterErrorResponse(ctx,err)
+		} else {
+			common.InternalServerErrorJSON(ctx, err, "%v", err.Error())
+		}
+		return
+	}
+	common.StatusJSON(ctx,iris.StatusOK,"%v",common.SliceMapToJSONString(itemsMap))
+	return
+}
+

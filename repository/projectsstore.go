@@ -17,6 +17,7 @@ import (
 type ProjectStoreService interface {
 	Create(ctx context.Context, req map[string]interface{}) ([]map[string]interface{}, error)
 	Get(ctx context.Context, filter interface{}) ([]map[string]interface{}, error)
+	Delete(ctx context.Context, filter interface{}) ([]map[string]interface{}, error)
 }
 
 type projectStoreService struct {
@@ -93,5 +94,24 @@ func (pss *projectStoreService) Get(ctx context.Context, filter interface{}) ([]
 		default:
 	}
 
+	return itemsMap, err
+}
+
+func (pss *projectStoreService) Delete(ctx context.Context, filter interface{}) ([]map[string]interface{}, error) {
+	
+	var itemsMap []map[string]interface{}
+	var err error
+	
+	switch pss.dbtype {
+		case "mongodb": {
+			itemsMap, err = MongoDBHandler.DeleteDoc("TrionSystem", 
+				common.ThisAppConfig.DBConfig.MongoConfig.ProjectsColl,
+				filter)
+			if err != nil {
+				return nil, err
+			}
+		}
+		default:
+	}
 	return itemsMap, err
 }

@@ -43,20 +43,19 @@ func (mh *mongoDBHandler) MongoDBInit(appConfig *common.AppConfig) {
 	}
 }
 
-// returns slice of acquired docs or error
-func (mh *mongoDBHandler) GetDocs(dbname string, 
-				collectionname string, 
-				filter interface{}) ([]map[string]interface{}, error) {
+//handle filter types; parsedFilter will be modified
+func prepareParsedFilter(parsedFilter map[string]interface{}, filter interface{}) {
 	
-	fmt.Println("=> GetDocs, filter: %v", filter)
-	//unify filter before passing to actual query
-	var parsedFilter = map[string]interface{}{}
 	switch v:=filter.(type) {
 		case []byte: {
 			if err := json.Unmarshal(v,&parsedFilter); err!=nil {
 			}
 		}
-		case map[string]interface{}: parsedFilter=v
+		case map[string]interface{}: {
+			for key,val := range v {
+				parsedFilter[key]=val
+			}
+		}
 		case bson.M : {
 			var temporaryBytes []byte
 			var err error
@@ -68,7 +67,20 @@ func (mh *mongoDBHandler) GetDocs(dbname string,
 		}
 		default: //nothing, empty filter
 	}
-	fmt.Println("=> GetDocs, parsedFilter: %v", parsedFilter)
+	fmt.Println("=> prepareParsedFilter, parsedFilter: %v", parsedFilter)
+	return
+}
+
+// returns slice of acquired docs or error
+func (mh *mongoDBHandler) GetDocs(dbname string, 
+				collectionname string, 
+				filter interface{}) ([]map[string]interface{}, error) {
+	
+	fmt.Println("=> GetDocs, filter: %v", filter)
+	//unify filter before passing to actual query
+	var parsedFilter = map[string]interface{}{}
+	prepareParsedFilter(parsedFilter, filter)
+	//fmt.Println("=> GetDocs, parsedFilter: %v", parsedFilter)
 
 	itemsMap, err :=mh.getDocs(dbname,collectionname,parsedFilter)
 	if err != nil {
@@ -89,7 +101,8 @@ func (mh *mongoDBHandler) InsertDoc(dbname string,
 		log.Fatal(err)
 	}
 	fmt.Printf("inserted document with ID %v\n", res.InsertedID.(primitive.ObjectID).Hex())
-	itemsMap, _ :=mh.getDocs(dbname,collectionname,bson.M{"_id":res.InsertedID})
+	itemsMap, _ := mh.getDocs(dbname,collectionname,bson.M{"_id":res.InsertedID})
+	
 	return itemsMap
 }
 
@@ -132,3 +145,29 @@ func (mh *mongoDBHandler) getDocs(dbname string,
 	fmt.Println("== /getDocs")
 	return itemsMap, nil
 }
+
+func (mh *mongoDBHandler) DeleteDoc(dbname string, 
+				collectionname string, 
+					filter interface{}) ([]map[string]interface{}, error) {
+	
+	//unify filter before passing to actual query
+	var parsedFilter = map[string]interface{}{}
+	prepareParsedFilter(parsedFilter, filter)
+	oid, err := primitive.ObjectIDFromHex(parsedFilter["_id"].(string))
+	if err != nil { err = common.InvalidIdError{parsedFilter["_id"].(string)}; return nil, err }
+	parsedFilter["_id"]=oid
+	// grab deleted doc, so it can be provided in response
+	itemsMap, err := mh.getDocs(dbname,collectionname,parsedFilter)
+	if err != nil {return nil, err }
+  fmt.Println("== DeleteDoc, doc to be deleted: ", itemsMap)
+	db := mh.MongoClient.Database(dbname)
+	collection := db.Collection(collectionname)
+	res, err := collection.DeleteOne(context.TODO(), parsedFilter)
+	if err != nil {
+    return nil, err
+	}
+	fmt.Printf("== DeleteDoc, deleted %v documents\n", res.DeletedCount)
+	return itemsMap, nil
+	
+}
+

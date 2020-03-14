@@ -8,6 +8,7 @@ import (
 	//"gopkg.in/mgo.v2/bson"
 
 	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/hero"
 	//"github.com/kataras/iris/context"
 	//"github.com/kataras/iris/middleware/logger"
 	//"github.com/kataras/iris/middleware/recover"
@@ -49,9 +50,11 @@ func registerApiRoutes(app *iris.Application) {
 			psHandler := API.NewProjectService(pss)
 			projects.Get("/", psHandler.GetAll)
 			projects.Post("/", psHandler.Create)
+			// hero handlers for path parameters
+			projects.Delete("/{id:string}", hero.Handler(psHandler.DeleteById))
 			//projects.Get("/{project:string}", h)
 			//projects.Put("/{project:string}", h)
-			//projects.Delete("/{project:string}", h)
+			
 		}
 	}
 }

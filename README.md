@@ -44,9 +44,9 @@ Planned Endpoints:
 ```
 GET     /projects            # get a list of projects
 POST    /projects            # create a project
-DELETE  /projects/:project   # delete a project
-GET     /projects/:project   # retrieve specific project info
-PUT     /projects/:project   # update some of specific project data
+DELETE  /projects/:projectid # delete a project with specific id
+GET     /projects/:projectid # retrieve specific project info
+PUT     /projects/:projectid # update some of specific project data
 ```
 
 ### Basic content container: Trion

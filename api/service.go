@@ -4,5 +4,5 @@ import "github.com/kataras/iris/v12"
 type Service interface {
 	Create(ctx iris.Context)
 	GetAll(ctx iris.Context)
-	Delete(ctx iris.Context)
+	DeleteById(ctx iris.Context, id string)
 }

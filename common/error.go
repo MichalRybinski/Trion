@@ -159,3 +159,15 @@ func BadRequestAfterErrorResponse(ctx iris.Context, err error) {
 	httpErr := FailJSON(ctx,iris.StatusBadRequest,err,"%v",err.Error())
 	LogFailure(os.Stderr, ctx, httpErr)
 }
+
+
+
+type ProjectAlreadyExistsError struct {
+	ProjName string
+}
+func (e ProjectAlreadyExistsError) Error() string { return e.ProjName + ": already exists" }
+
+type InvalidIdError struct {
+	Id string
+}
+func (e InvalidIdError) Error() string { return e.Id + ": invalid id" }
