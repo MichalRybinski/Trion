@@ -6,4 +6,5 @@ type APIService interface {
 	GetAll(ctx iris.Context)
 	DeleteById(ctx iris.Context, id string)
 	UpdateById(ctx iris.Context, id string)
+	GetById(ctx iris.Context, id string)
 }

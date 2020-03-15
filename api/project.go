@@ -96,9 +96,22 @@ func (p *ProjectService) GetAll(ctx iris.Context) {
 	// get projects from DB
 	itemsMap, err:= p.PSS.Read(nil, filter); 
 	if err !=nil {
-		common.APIErrorSwitch(ctx,err,"")
+		common.APIErrorSwitch(ctx,err,common.SliceMapToJSONString(itemsMap))
+	} else {
+		common.StatusJSON(ctx,iris.StatusOK,"%v",common.SliceMapToJSONString(itemsMap))
 	}
-	common.StatusJSON(ctx,iris.StatusOK,"%v",common.SliceMapToJSONString(itemsMap))
+	return
+}
+
+func (p *ProjectService) GetById(ctx iris.Context, id string) {
+	var filter = map[string]interface{}{ "_id" : id }
+	// get projects from DB
+	itemsMap, err:= p.PSS.Read(nil, filter); 
+	if err !=nil {
+		common.APIErrorSwitch(ctx,err,common.SliceMapToJSONString(itemsMap))
+	} else {
+		common.StatusJSON(ctx,iris.StatusOK,"%v",common.SliceMapToJSONString(itemsMap))
+	}
 	return
 }
 
@@ -119,7 +132,7 @@ func (p *ProjectService) DeleteById(ctx iris.Context, id string) {
 func (p* ProjectService) UpdateById(ctx iris.Context, id string) {
 	var projRequest map[string]interface{}
 	err := common.ParseRequestToJSON(ctx, &projRequest)
-	if err != nil { return }
+	if err != nil { common.BadRequestAfterErrorResponse(ctx,err); return }
 
 	var filter = map[string]interface{}{ "_id" : id }
 
@@ -134,7 +147,7 @@ func (p* ProjectService) UpdateById(ctx iris.Context, id string) {
 		projRequest["schema_rev"] = schemas.ProjectJSchemaVersion
 		itemsMap, err:= p.PSS.Update(nil, filter, projRequest) //save to DB
 		if err != nil { 
-			common.APIErrorSwitch(ctx,err,"")
+			common.APIErrorSwitch(ctx,err,common.SliceMapToJSONString(itemsMap))
 		} else {
 		common.StatusJSON(ctx,iris.StatusOK,"%v",common.SliceMapToJSONString(itemsMap))
 		}

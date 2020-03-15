@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	//"errors"
-	"log"
+	//"log"
 
 	//"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -85,7 +85,7 @@ func (pss *projectStoreService) Read(ctx context.Context, filter interface{}) ([
 				common.ThisAppConfig.DBConfig.MongoConfig.ProjectsColl,
 				filter)
 			if err != nil {
-				log.Fatal(err)
+				// log
 			}
 		}
 		default:

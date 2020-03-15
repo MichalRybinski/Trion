@@ -71,23 +71,34 @@ func prepareParsedFilter(parsedFilter map[string]interface{}, filter interface{}
 	return
 }
 
+func ConvertStringIDToObjID(stringID string) (primitive.ObjectID, error) {
+	oid, err := primitive.ObjectIDFromHex(stringID)
+	if err != nil { err = common.InvalidIdError{stringID} } //Maybe wrap original error?
+	return oid, err
+}
 // returns slice of acquired docs or error
 func (mh *mongoDBHandler) GetDocs(dbname string, 
 				collectionname string, 
 				filter interface{}) ([]map[string]interface{}, error) {
 	
 	fmt.Println("=> GetDocs, filter: %v", filter)
+	var err error
+	var itemsMap []map[string]interface{}
 	//unify filter before passing to actual query
 	var parsedFilter = map[string]interface{}{}
 	prepareParsedFilter(parsedFilter, filter)
-	//fmt.Println("=> GetDocs, parsedFilter: %v", parsedFilter)
-
-	itemsMap, err :=mh.getDocs(dbname,collectionname,parsedFilter)
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
+	// check if "_id" is part of filter, convert accordingly
+	if _, ok := parsedFilter["_id"]; ok {
+		parsedFilter["_id"], err = ConvertStringIDToObjID(parsedFilter["_id"].(string))
+		if err != nil { /* log */ goto Done }
 	}
-	return itemsMap, nil
+
+	itemsMap, err = mh.getDocs(dbname,collectionname,parsedFilter)
+	if err != nil {
+		//log
+	}
+	Done:
+	return itemsMap, err
 }
 
 func (mh *mongoDBHandler) InsertDoc(dbname string, 
@@ -115,6 +126,9 @@ func (mh *mongoDBHandler) getDocs(dbname string,
 	var result bson.M
 	var results []bson.M
 	var itemsMap []map[string]interface{}
+	var ok bool
+	var errorMsg string
+	var jsonD []byte
 	fmt.Println("=== filter: %v",filter)
 	cursor, err := collection.Find(context.TODO(),filter)
 	if err != nil {
@@ -126,6 +140,13 @@ func (mh *mongoDBHandler) getDocs(dbname string,
 	}
 	if len(results) <= 0 {
 		fmt.Println("No doc found")
+		if _, ok = filter.(map[string]interface{})["_id"]; ok {
+			errorMsg = fmt.Sprintf("Not found with id : %s",filter.(map[string]interface{})["_id"].(primitive.ObjectID).Hex())
+		} else { 
+			jsonD, _ = json.Marshal(filter)
+			errorMsg = fmt.Sprintf("not found with filter : %s", string(jsonD))
+		}
+		err = common.NotFoundError{errorMsg}
 	} else {
 		fmt.Println("Doc(s) found:")
 		for _, result = range results {
@@ -144,12 +165,6 @@ func (mh *mongoDBHandler) getDocs(dbname string,
 	}
 	fmt.Println("== /getDocs")
 	return itemsMap, err
-}
-
-func ConvertStringIDToObjID(stringID string) (primitive.ObjectID, error) {
-	oid, err := primitive.ObjectIDFromHex(stringID)
-	if err != nil { err = common.InvalidIdError{stringID} } //Maybe wrap original error?
-	return oid, err
 }
 
 func (mh *mongoDBHandler) DeleteDoc(dbname string, 
@@ -218,6 +233,6 @@ func (mh *mongoDBHandler) UpdateDoc(dbname string,
 		err = common.NotFoundError{ fmt.Sprintf( "not found with _id : %s", parsedFilter["_id"].(primitive.ObjectID).Hex() ) }
 		fmt.Printf("No document updated for filter %v\n", parsedFilter)
 	}
-Done:
+	Done:
 	return itemsMap, err
 }
