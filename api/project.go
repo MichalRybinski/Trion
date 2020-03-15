@@ -1,13 +1,13 @@
 package API
 
 import (
-	"os"
+	//"os"
 	"github.com/kataras/iris/v12"
 	//"github.com/kataras/iris/v12/hero"
 	//"github.com/kataras/iris/context"
 	
 	"github.com/xeipuuv/gojsonschema"
-	"fmt"
+	//"fmt"
 	"strings"
 
 	"github.com/MichalRybinski/Trion/schemas"
@@ -35,11 +35,8 @@ func NewProjectService(pss repository.ProjectStoreService) *ProjectService {
 func (p *ProjectService) Create(ctx iris.Context) {
 
 	var projRequest map[string]interface{}
-	err := ctx.ReadJSON(&projRequest)
-	if err != nil {
-		common.BadRequestAfterErrorResponse(ctx,err)
-		return 
-	}
+	err := common.ParseRequestToJSON(ctx, &projRequest)
+	if err != nil { return }
 	
 	docLoader := gojsonschema.NewGoLoader(projRequest)
 	result, err := p.ProjectSchema.Validate(docLoader)
@@ -52,17 +49,9 @@ func (p *ProjectService) Create(ctx iris.Context) {
 		projRequest["schema_rev"] = schemas.ProjectJSchemaVersion
 		itemsMap, err:= p.PSS.Create(nil, projRequest) //save to DB
 		if err != nil { 
-			var httpErr common.HTTPError
-			// if project with 'name' already exists, return 409 along with existing resource data
-			if projExists, ok := err.(repository.ProjectAlreadyExistsError); ok {
-				httpErr = common.FailJSON(ctx,iris.StatusConflict,projExists,"%v",common.SliceMapToJSONString(itemsMap))
-			} else { //500 for anything else - db comms failed in general
-				httpErr = common.FailJSON(ctx,iris.StatusInternalServerError,err,"%v",err.Error())
-			}
-			common.LogFailure(os.Stderr, ctx, httpErr)
-			return
+			common.APIErrorSwitch(ctx,err,common.SliceMapToJSONString(itemsMap))
 		} else {
-		common.StatusJSON(ctx,iris.StatusOK,"%v",common.SliceMapToJSONString(itemsMap))
+			common.StatusJSON(ctx,iris.StatusOK,"%v",common.SliceMapToJSONString(itemsMap))
 		}
 	} else { common.BadRequestAfterJSchemaValidationResponse(ctx,result) }
 	return
@@ -81,7 +70,6 @@ func (p *ProjectService) GetAll(ctx iris.Context) {
 		"filter" : {our filter json}
 	}
 	*/
-	fmt.Println("=> API.GetAll content-type requested: %s", ctx.GetContentTypeRequested())
 	if strings.ToLower(ctx.GetContentTypeRequested()) == "application/json" {
 		var request map[string]interface{}
 		err := ctx.ReadJSON(&request)
@@ -89,7 +77,7 @@ func (p *ProjectService) GetAll(ctx iris.Context) {
 			common.BadRequestAfterErrorResponse(ctx,err)
 			return
 		}
-		fmt.Println("=> API.GetAll, request: %v",request)
+
 		//validate schema
 		docLoader := gojsonschema.NewGoLoader(request)
 		result, err := p.ProjectFilterSchema.Validate(docLoader)
@@ -105,33 +93,53 @@ func (p *ProjectService) GetAll(ctx iris.Context) {
 			return
 		}
 	}
-	fmt.Println("=> API.GetAll, filter: %v",filter)
 	// get projects from DB
-	itemsMap, err:= p.PSS.Get(nil, filter); 
+	itemsMap, err:= p.PSS.Read(nil, filter); 
 	if err !=nil {
-		common.InternalServerErrorJSON(ctx, err, "%v", err.Error())
+		common.APIErrorSwitch(ctx,err,"")
 	}
 	common.StatusJSON(ctx,iris.StatusOK,"%v",common.SliceMapToJSONString(itemsMap))
 	return
 }
 
+
 func (p *ProjectService) DeleteById(ctx iris.Context, id string) {
 	
-	fmt.Println(" => API.DeleteById! id: %s",id)
 	var filter = map[string]interface{}{ "_id" : id }
-	fmt.Println(" => API.DeleteById! filter: %s",filter)
 	itemsMap, err := p.PSS.Delete(nil, filter)
-	fmt.Println(itemsMap)
-	fmt.Println(err)
+
 	if err != nil {
-		if _, ok := err.(common.InvalidIdError); ok {
-			common.BadRequestAfterErrorResponse(ctx,err)
-		} else {
-			common.InternalServerErrorJSON(ctx, err, "%v", err.Error())
-		}
+		common.APIErrorSwitch(ctx,err,"")
+	} else {
+		common.StatusJSON(ctx,iris.StatusOK,"%v",common.SliceMapToJSONString(itemsMap))
+	}
+	return
+}
+
+func (p* ProjectService) UpdateById(ctx iris.Context, id string) {
+	var projRequest map[string]interface{}
+	err := common.ParseRequestToJSON(ctx, &projRequest)
+	if err != nil { return }
+
+	var filter = map[string]interface{}{ "_id" : id }
+
+	docLoader := gojsonschema.NewGoLoader(projRequest)
+	result, err := p.ProjectSchema.Validate(docLoader)
+	if err != nil {
+		common.BadRequestAfterErrorResponse(ctx,err)
 		return
 	}
-	common.StatusJSON(ctx,iris.StatusOK,"%v",common.SliceMapToJSONString(itemsMap))
+
+	if result.Valid() {
+		projRequest["schema_rev"] = schemas.ProjectJSchemaVersion
+		itemsMap, err:= p.PSS.Update(nil, filter, projRequest) //save to DB
+		if err != nil { 
+			common.APIErrorSwitch(ctx,err,"")
+		} else {
+		common.StatusJSON(ctx,iris.StatusOK,"%v",common.SliceMapToJSONString(itemsMap))
+		}
+	} else { common.BadRequestAfterJSchemaValidationResponse(ctx,result) }
 	return
+
 }
 

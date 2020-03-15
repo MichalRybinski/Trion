@@ -67,7 +67,7 @@ func prepareParsedFilter(parsedFilter map[string]interface{}, filter interface{}
 		}
 		default: //nothing, empty filter
 	}
-	fmt.Println("=> prepareParsedFilter, parsedFilter: %v", parsedFilter)
+	fmt.Println("=> prepareParsedFilter, parsedFilter: ", parsedFilter)
 	return
 }
 
@@ -92,18 +92,18 @@ func (mh *mongoDBHandler) GetDocs(dbname string,
 
 func (mh *mongoDBHandler) InsertDoc(dbname string, 
 				collectionname string, 
-				jsonDoc map[string]interface{}) ([]map[string]interface{}) {
+				jsonDoc map[string]interface{}) ([]map[string]interface{}, error) {
 
 	db := mh.MongoClient.Database(dbname)
 	collection := db.Collection(collectionname)
 	res, err := collection.InsertOne(context.TODO(), jsonDoc)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	fmt.Printf("inserted document with ID %v\n", res.InsertedID.(primitive.ObjectID).Hex())
-	itemsMap, _ := mh.getDocs(dbname,collectionname,bson.M{"_id":res.InsertedID})
+	itemsMap, err := mh.getDocs(dbname,collectionname,bson.M{"_id":res.InsertedID})
 	
-	return itemsMap
+	return itemsMap, err
 }
 
 func (mh *mongoDBHandler) getDocs(dbname string, 
@@ -112,62 +112,112 @@ func (mh *mongoDBHandler) getDocs(dbname string,
 	fmt.Println("== getDocs")
 	db := mh.MongoClient.Database(dbname)
 	collection := db.Collection(collectionname)
+	var result bson.M
+	var results []bson.M
+	var itemsMap []map[string]interface{}
 	fmt.Println("=== filter: %v",filter)
 	cursor, err := collection.Find(context.TODO(),filter)
 	if err != nil {
-		log.Fatal(err)
-		return nil, err
+		goto Done
 	}
-	var results []bson.M
-	var itemsMap []map[string]interface{}
 	
 	if err = cursor.All(context.TODO(), &results); err != nil {
-			log.Fatal(err)
-			return nil, err
+			goto Done
 	}
 	if len(results) <= 0 {
 		fmt.Println("No doc found")
 	} else {
 		fmt.Println("Doc(s) found:")
-		for _, result := range results {
+		for _, result = range results {
 			var itemMap map[string]interface{}
 			b, _ := bson.Marshal(result)
 			bson.Unmarshal(b, &itemMap)
 			itemMap["_id"] = itemMap["_id"].(primitive.ObjectID).Hex()
 			fmt.Printf("itemMap after id: %v\n",itemMap)
 			itemsMap = append(itemsMap, itemMap)
-		}
-		fmt.Printf("itemsMap: %s\n",itemsMap)
-		for k, v := range itemsMap {
-			fmt.Println("itemsMap[%v] v: %v", k, v)
-		}
+		}	
+	}	
+	Done:
+	fmt.Printf("itemsMap: %v\n",itemsMap)
+	for k, v := range itemsMap {
+		fmt.Println("itemsMap[",k,"]=",v)
 	}
 	fmt.Println("== /getDocs")
-	return itemsMap, nil
+	return itemsMap, err
+}
+
+func ConvertStringIDToObjID(stringID string) (primitive.ObjectID, error) {
+	oid, err := primitive.ObjectIDFromHex(stringID)
+	if err != nil { err = common.InvalidIdError{stringID} } //Maybe wrap original error?
+	return oid, err
 }
 
 func (mh *mongoDBHandler) DeleteDoc(dbname string, 
 				collectionname string, 
 					filter interface{}) ([]map[string]interface{}, error) {
 	
+	var itemsMap []map[string]interface{}
+	var err error
+	db := mh.MongoClient.Database(dbname)
+	collection := db.Collection(collectionname)
+	var res *mongo.DeleteResult
 	//unify filter before passing to actual query
 	var parsedFilter = map[string]interface{}{}
 	prepareParsedFilter(parsedFilter, filter)
-	oid, err := primitive.ObjectIDFromHex(parsedFilter["_id"].(string))
-	if err != nil { err = common.InvalidIdError{parsedFilter["_id"].(string)}; return nil, err }
-	parsedFilter["_id"]=oid
-	// grab deleted doc, so it can be provided in response
-	itemsMap, err := mh.getDocs(dbname,collectionname,parsedFilter)
-	if err != nil {return nil, err }
-  fmt.Println("== DeleteDoc, doc to be deleted: ", itemsMap)
-	db := mh.MongoClient.Database(dbname)
-	collection := db.Collection(collectionname)
-	res, err := collection.DeleteOne(context.TODO(), parsedFilter)
-	if err != nil {
-    return nil, err
+	// check if "_id" is part of filter, convert accordingly
+	if _, ok := parsedFilter["_id"]; ok {
+		parsedFilter["_id"], err = ConvertStringIDToObjID(parsedFilter["_id"].(string))
+		if err != nil { goto Done }
 	}
-	fmt.Printf("== DeleteDoc, deleted %v documents\n", res.DeletedCount)
-	return itemsMap, nil
 	
+	// grab doc to be deleted, so it can be provided in response for reference
+	itemsMap, err = mh.getDocs(dbname,collectionname,parsedFilter)
+	if err != nil { goto Done }
+	fmt.Println("== DeleteDoc, doc to be deleted: ", itemsMap)
+	res, err = collection.DeleteOne(context.TODO(), parsedFilter)
+	fmt.Printf("== DeleteDoc, deleted %v documents\n", res.DeletedCount)
+	if res.DeletedCount == 0 {
+		err = common.NotFoundError{ fmt.Sprintf( "not found with _id : %s", parsedFilter["_id"].(primitive.ObjectID).Hex() ) }
+	}
+	Done:
+	return itemsMap, err
 }
 
+func (mh *mongoDBHandler) UpdateDoc(dbname string, 
+				collectionname string, 
+				filter interface{}, 
+				jsonDoc map[string]interface{}) ([]map[string]interface{}, error) {
+
+	var itemsMap []map[string]interface{}
+	var err error
+	db := mh.MongoClient.Database(dbname)
+	collection := db.Collection(collectionname)
+	var res *mongo.UpdateResult
+	//unify filter before passing to actual query
+	var parsedFilter = map[string]interface{}{}
+	prepareParsedFilter(parsedFilter, filter)
+	// check if "_id" is part of filter, convert accordingly
+	if _, ok := parsedFilter["_id"]; ok {
+		parsedFilter["_id"], err = ConvertStringIDToObjID(parsedFilter["_id"].(string))
+		if err != nil { return nil, err }
+	}
+	
+	// parse jsonDoc into proper MongoDB update specification
+	// basically: { "$set" : {jsonDoc}}
+	var updateDoc = map[string]interface{}{}
+	updateDoc["$set"]=jsonDoc
+
+	res, err = collection.UpdateOne(context.TODO(), parsedFilter, updateDoc)
+	if err != nil {
+		goto Done
+	}
+	if res.MatchedCount != 0 {
+		itemsMap, err = mh.getDocs(dbname,collectionname,parsedFilter)
+		fmt.Printf("Updated existing document %v\n for filter %v\n", itemsMap, parsedFilter)
+	} else {
+		err = common.NotFoundError{ fmt.Sprintf( "not found with _id : %s", parsedFilter["_id"].(primitive.ObjectID).Hex() ) }
+		fmt.Printf("No document updated for filter %v\n", parsedFilter)
+	}
+Done:
+	return itemsMap, err
+}

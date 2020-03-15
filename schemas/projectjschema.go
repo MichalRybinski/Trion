@@ -8,19 +8,9 @@ const ProjectJSchema string =`{
     "title": "The Project Schema",
     "description": "The basic Project JSON Schema",
     "propertyNames": {
-    	"enum": ["_id", "name","type","schema_rev"]
+    	"enum": ["name","type","schema_rev"]
   	},
     "properties": {
-        "_id": {
-            "$id": "#/properties/_id",
-            "type": "string",
-            "title": "The Id Schema",
-            "description": "An UUID for single Project instance",
-            "default": "",
-            "examples": [
-                "00b46e01-3994-4ac2-939e-2d5052a65961"
-            ]
-        },
         "name": {
             "$id": "#/properties/name",
             "type": "string",
@@ -52,7 +42,7 @@ const ProjectJSchema string =`{
     },
     "anyOf": [
       {
-        "required" : ["_id","name"]
+        "required" : ["name"]
       },
       {
         "required" : ["type","name"]

@@ -52,9 +52,8 @@ func registerApiRoutes(app *iris.Application) {
 			projects.Post("/", psHandler.Create)
 			// hero handlers for path parameters
 			projects.Delete("/{id:string}", hero.Handler(psHandler.DeleteById))
+			projects.Put("/{id:string}", hero.Handler(psHandler.UpdateById))
 			//projects.Get("/{project:string}", h)
-			//projects.Put("/{project:string}", h)
-			
 		}
 	}
 }

@@ -160,14 +160,43 @@ func BadRequestAfterErrorResponse(ctx iris.Context, err error) {
 	LogFailure(os.Stderr, ctx, httpErr)
 }
 
+//general not found after some error
+func NotFoundAfterErrorResponse(ctx iris.Context, err error) {
+	httpErr := FailJSON(ctx,iris.StatusNotFound,err,"%v",err.Error())
+	LogFailure(os.Stderr, ctx, httpErr)
+}
 
+//conflict 409 if another instance fo resource exists
+func ConflictAfterErrorResponse(ctx iris.Context, err error, existingData string) {
+	var msgStr string
+	if existingData == "" {msgStr = err.Error()} else {
+		msgStr=existingData
+	}
+	httpErr := FailJSON(ctx,iris.StatusConflict,err,"%v",msgStr)
+	LogFailure(os.Stderr, ctx, httpErr)
+}
+
+
+func APIErrorSwitch(ctx iris.Context, err error, additionalMsg string) {
+	switch err.(type) {
+		case InvalidIdError: BadRequestAfterErrorResponse(ctx,err)
+		case NotFoundError: NotFoundAfterErrorResponse(ctx,err)
+		case ProjectAlreadyExistsError: ConflictAfterErrorResponse(ctx,err,additionalMsg)
+		default: InternalServerErrorJSON(ctx, err, "%v", err.Error()) // general 500 error			
+	}
+}
 
 type ProjectAlreadyExistsError struct {
 	ProjName string
 }
-func (e ProjectAlreadyExistsError) Error() string { return e.ProjName + ": already exists" }
+func (e ProjectAlreadyExistsError) Error() string { return e.ProjName + " : already exists" }
 
 type InvalidIdError struct {
 	Id string
 }
-func (e InvalidIdError) Error() string { return e.Id + ": invalid id" }
+func (e InvalidIdError) Error() string { return e.Id +  " : invalid id"}
+
+type NotFoundError struct {
+	Item string
+}
+func (e NotFoundError) Error() string { return e.Item }

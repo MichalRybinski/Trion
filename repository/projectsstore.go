@@ -10,13 +10,15 @@ import (
 	// up to you:
 	//"go.mongodb.org/mongo-driver/mongo/options"
 	"fmt"
+	//"encoding/json"
 
 	"github.com/MichalRybinski/Trion/common"
 )
 
 type ProjectStoreService interface {
-	Create(ctx context.Context, req map[string]interface{}) ([]map[string]interface{}, error)
-	Get(ctx context.Context, filter interface{}) ([]map[string]interface{}, error)
+	Create(ctx context.Context, createReq map[string]interface{}) ([]map[string]interface{}, error)
+	Update(ctx context.Context, filter interface{}, updateReq map[string]interface{}) ([]map[string]interface{}, error)
+	Read(ctx context.Context, filter interface{}) ([]map[string]interface{}, error)
 	Delete(ctx context.Context, filter interface{}) ([]map[string]interface{}, error)
 }
 
@@ -41,28 +43,29 @@ func NewProjectStoreService(collection interface{}) ProjectStoreService {
 	return &pss
 }
 
-func (pss *projectStoreService) Create(ctx context.Context, req map[string]interface{}) ([]map[string]interface{}, error) {
+func (pss *projectStoreService) Create(ctx context.Context, createReq map[string]interface{}) ([]map[string]interface{}, error) {
+	
 	var itemsMap []map[string]interface{}
 	var err error
 	
 	switch pss.dbtype {
 		case "mongodb" : {
-			projName := req["name"].(string)
+			projName := createReq["name"].(string)
 			fmt.Println("PROJSTORESERVICE.Create %s",projName)
 			//TODO: insert doc into system-Projects if doc doesn't exist or return error with existing doc
 			itemsMap, err = MongoDBHandler.GetDocs("TrionSystem", 
 				common.ThisAppConfig.DBConfig.MongoConfig.ProjectsColl,
 				map[string]interface{}{"name": projName})
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			} else if len(itemsMap) > 0 {
-        err = ProjectAlreadyExistsError{projName}
+        err = common.ProjectAlreadyExistsError{projName}
 			} else { //len(itemsMap) < 1
-				itemsMap = MongoDBHandler.InsertDoc("TrionSystem",
+				itemsMap, err = MongoDBHandler.InsertDoc("TrionSystem",
 					common.ThisAppConfig.DBConfig.MongoConfig.ProjectsColl,
-					req)
-				fmt.Printf("PSS, itemsMap: %v\n",itemsMap)
-				err = nil
+					createReq)
+				fmt.Printf("PSS, itemsMap: %v err: %v \n",itemsMap, err)
+				if err !=nil { return itemsMap, err }
 			}
 		}
 	//TODO: in case of psql create separate DB with name equal to "name" in project request - use repository.proper handler
@@ -72,13 +75,7 @@ func (pss *projectStoreService) Create(ctx context.Context, req map[string]inter
 	return itemsMap, err
 }
 
-type ProjectAlreadyExistsError struct {
-	ProjName string
-}
-
-func (e ProjectAlreadyExistsError) Error() string { return e.ProjName + ": already exists" }
-
-func (pss *projectStoreService) Get(ctx context.Context, filter interface{}) ([]map[string]interface{}, error) {
+func (pss *projectStoreService) Read(ctx context.Context, filter interface{}) ([]map[string]interface{}, error) {
 	var itemsMap []map[string]interface{}
 	var err error
 	
@@ -108,10 +105,31 @@ func (pss *projectStoreService) Delete(ctx context.Context, filter interface{}) 
 				common.ThisAppConfig.DBConfig.MongoConfig.ProjectsColl,
 				filter)
 			if err != nil {
-				return nil, err
+				//log
 			}
 		}
 		default:
 	}
+
+	return itemsMap, err
+}
+
+func (pss *projectStoreService) Update(ctx context.Context, filter interface{}, updateReq map[string]interface{}) ([]map[string]interface{}, error) {
+	var itemsMap []map[string]interface{}
+	var err error
+
+	switch pss.dbtype {
+		case "mongodb": {
+			itemsMap, err = MongoDBHandler.UpdateDoc("TrionSystem", 
+				common.ThisAppConfig.DBConfig.MongoConfig.ProjectsColl,
+				filter,
+				updateReq)
+			if err != nil {
+				//log
+			}
+		}
+		default:
+	}
+
 	return itemsMap, err
 }

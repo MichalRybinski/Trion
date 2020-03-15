@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"github.com/kataras/iris/v12"
 )
 
 func ReadJsonToString(filepath string) (jsonString string) {
@@ -36,4 +37,15 @@ func PrepJSONRawMsg(desc string) *json.RawMessage {
 		details = json.RawMessage(string(msg))
 	}
 	return &details
+}
+
+// common action among Service implementations
+// if request JSON can not be unmarshalled, returns 400 via iris.Context
+func ParseRequestToJSON(ctx iris.Context, projRequest *map[string]interface{}) error {
+	err := ctx.ReadJSON(projRequest)
+	if err != nil {
+		BadRequestAfterErrorResponse(ctx,err)
+		return err
+	}
+	return nil
 }
