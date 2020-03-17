@@ -10,6 +10,8 @@ import (
 
 const HJSONConfFile string = "./configs/config.hjson"
 const YmlConfFile string = "./configs/config.yml"
+const SysDBName string = "TrionSystem"
+const DBUsersCollectionName string = "Users"
 
 type AppConfig struct {
 	ServerConfig struct {

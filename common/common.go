@@ -6,7 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"github.com/kataras/iris/v12"
+	//"github.com/kataras/iris/v12"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func ReadJsonToString(filepath string) (jsonString string) {
@@ -30,7 +31,8 @@ func ReadJsonToString(filepath string) (jsonString string) {
 // we want always an object or table of strings in 'details'
 func PrepJSONRawMsg(desc string) *json.RawMessage {
 	var details json.RawMessage
-	if (strings.HasPrefix(desc, "{") || strings.HasPrefix(desc, "[") ) {
+	//returning always a table of strings containing error messages
+	if (strings.HasPrefix(desc, "[") ) {
 		details = json.RawMessage(desc)
 	} else {
 		msg, _ := json.Marshal([]string {desc})
@@ -39,13 +41,45 @@ func PrepJSONRawMsg(desc string) *json.RawMessage {
 	return &details
 }
 
-// common action among Service implementations
-// if request JSON can not be unmarshalled, returns 400 via iris.Context
-func ParseRequestToJSON(ctx iris.Context, projRequest *map[string]interface{}) error {
-	err := ctx.ReadJSON(projRequest)
-	if err != nil {
-		BadRequestAfterErrorResponse(ctx,err)
-		return err
+// Type Conversion helper
+// handle 'input' types; 'converted' will be modified
+func ConvertInterfaceToMapStringInterface(input interface{}) map[string]interface{} {
+	var converted = map[string]interface{}{}
+	switch v:=input.(type) {
+		case []byte: {
+			if err := json.Unmarshal(v,&converted); err!=nil {
+			}
+		}
+		case map[string]interface{}: {
+			for key,val := range v {
+				converted[key]=val
+			}
+		}
+		case bson.M : {
+			var temporaryBytes []byte
+			var err error
+			temporaryBytes, err = bson.MarshalExtJSON(v, true, true)
+			if err == nil {
+				err = json.Unmarshal(temporaryBytes, &converted)
+				if err != nil {}
+			}
+		}
+		default: //nothing, empty filter
 	}
-	return nil
+	fmt.Println("=> ConvertInterfaceToMapStringInterface, converted: ", converted)
+	return converted
+}
+
+func MapStringInterface2String(mapVar map[string]interface{}) string {
+	msglist := make([]string,0)
+	for k,v:= range mapVar {
+		msglist=append(msglist,fmt.Sprintf("Parameter '%s' has value: '%s'",k,v))
+	}
+	return Lines2JSONString(&msglist)
+}
+
+func Lines2JSONString(multiline *[]string) string {
+	j, _ := json.Marshal(multiline)
+	res := string(j)
+	return res
 }

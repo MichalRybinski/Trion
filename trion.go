@@ -32,10 +32,13 @@ func registerErrors(app *iris.Application) {
 }
 
 func registerApiRoutes(app *iris.Application) {
+	dss, err := repository.NewDataStoreService(common.ThisAppConfig.DBConfig.DBType)
+	if err != nil {
+		return
+	}
 	apiMiddleware := func(ctx iris.Context) {
 		ctx.Next()
 	}
-    
 	// party is just a group of routes with the same prefix
 	// and middleware, i.e: "/api" and apiMiddleware.
 	api := app.Party("/api", apiMiddleware)
@@ -43,11 +46,7 @@ func registerApiRoutes(app *iris.Application) {
 		v1 := api.Party("/v1")
 		projects := v1.Party("/projects")
 		{
-			//if common.ThisAppConfig.DBConfig.DBType =="mongodb" { 
-				pss:=repository.NewProjectStoreService(repository.MongoDBHandler.MongoProjectsDB)
-			// } else { //psql
-			// } 
-			psHandler := API.NewProjectService(pss)
+			psHandler := API.NewProjectService(dss)
 			projects.Get("/", psHandler.GetAll)
 			projects.Post("/", psHandler.Create)
 			// hero handlers for path parameters
@@ -55,6 +54,9 @@ func registerApiRoutes(app *iris.Application) {
 			projects.Put("/{id:string}", hero.Handler(psHandler.UpdateById))
 			projects.Get("/{id:string}", hero.Handler(psHandler.GetById))
 		}
+		usHandler := API.NewUserService(dss)
+		v1.Post("/{projName:string}/signin", hero.Handler(usHandler.SignIn))
+		v1.Post("/signin", hero.Handler(usHandler.SignIn))
 	}
 }
 

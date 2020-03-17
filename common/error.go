@@ -23,13 +23,7 @@ func JSONSchemaValidationErrorsToString (result *gojsonschema.Result) string {
 		for _, desc := range result.Errors() {
 			message = append(message, fmt.Sprintf("%v", desc))
 		}
-	return ErrLines2JSON(&message)
-}
-
-func ErrLines2JSON(multiline *[]string) string {
-	j, _ := json.Marshal(multiline)
-	res := string(j)
-	return res
+	return Lines2JSONString(&message)
 }
 
 // basic code from https://github.com/kataras/iris/blob/a1e9813c610a61aba3e803a655cefc36c6efc3b2/_examples/tutorial/mongodb/httputil/error.go
@@ -167,12 +161,13 @@ func NotFoundAfterErrorResponse(ctx iris.Context, err error) {
 }
 
 //conflict 409 if another instance fo resource exists
-func ConflictAfterErrorResponse(ctx iris.Context, err error, existingData string) {
-	var msgStr string
-	if existingData == "" {msgStr = err.Error()} else {
-		msgStr=existingData
-	}
-	httpErr := FailJSON(ctx,iris.StatusConflict,err,"%v",msgStr)
+func ConflictAfterErrorResponse(ctx iris.Context, err error) {
+	httpErr := FailJSON(ctx,iris.StatusConflict,err,"%v",err.Error())
+	LogFailure(os.Stderr, ctx, httpErr)
+}
+// classic 401
+func UnauthorizedResponse(ctx iris.Context, err error) {
+	httpErr := FailJSON(ctx,iris.StatusUnauthorized,err,"%v",err.Error())
 	LogFailure(os.Stderr, ctx, httpErr)
 }
 
@@ -181,15 +176,15 @@ func APIErrorSwitch(ctx iris.Context, err error, additionalMsg string) {
 	switch err.(type) {
 		case InvalidIdError: BadRequestAfterErrorResponse(ctx,err)
 		case NotFoundError: NotFoundAfterErrorResponse(ctx,err)
-		case ProjectAlreadyExistsError: ConflictAfterErrorResponse(ctx,err,additionalMsg)
+		case ItemAlreadyExistsError: ConflictAfterErrorResponse(ctx,err)
 		default: InternalServerErrorJSON(ctx, err, "%v", err.Error()) // general 500 error			
 	}
 }
 
-type ProjectAlreadyExistsError struct {
-	ProjName string
+type ItemAlreadyExistsError struct {
+	Item string
 }
-func (e ProjectAlreadyExistsError) Error() string { return e.ProjName + " : already exists" }
+func (e ItemAlreadyExistsError) Error() string { return e.Item + " : already exists" }
 
 type InvalidIdError struct {
 	Id string
@@ -200,3 +195,20 @@ type NotFoundError struct {
 	Item string
 }
 func (e NotFoundError) Error() string { return e.Item }
+
+type NotSupportedDBError struct {
+	DBType string
+}
+func (e NotSupportedDBError) Error() string { return e.DBType + " : not supported" }
+
+type UnauthorizedError struct {
+	Info string
+}
+func (e UnauthorizedError) Error() string { return e.Info + " : invalid" }
+
+type InvalidParametersError struct {
+	Parameters map[string]interface{}
+}
+func (e InvalidParametersError) Error() string { 
+	return MapStringInterface2String(e.Parameters)
+}
