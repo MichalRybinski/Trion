@@ -78,15 +78,6 @@ func (us *UserService) SignIn(ctx iris.Context, projectName string) {
 						if err == nil || retries == 0 { break }
 						// Consider: add some sleep between retries?
 					}
-					/*critsection:
-					claims["uuid"] = uuid.NewV4().String()
-					token:= c.GetJWTToken(ctx, claims)
-					auth, _ := c.StructToMap(m.NewAuth(claims["sub"].(string), claims["uuid"].(string), token), "json")
-					if _, err = us.DSS.Create(nil, auth, map[string]interface{}{
-							"dbName": c.UsersDBName,
-							"collectionName" : c.UsersDBAuthCollection,
-						}); err != nil {goto critsection} //entry in DB must match the token!
-						// TODO: break after a couple of retries*/
 					if err == nil { 
 						c.StatusJSON(ctx,iris.StatusOK,"%s",c.MapToJSON(map[string]interface{}{
 							"token" : token,
