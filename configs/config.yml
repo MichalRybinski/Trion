@@ -11,3 +11,5 @@ db:
     URL: "mongodb://localhost:27017"
     ProjectsColl: "Projects"
     SchemasColl: "Schemas"
+
+secretkey: rwpGl3urnZBs74jMAFag

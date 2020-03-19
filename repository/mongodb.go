@@ -4,8 +4,8 @@ import (
 	//"gopkg.in/mgo.v2/bson"
 	//"gopkg.in/mgo.v2"
 
-	"github.com/MichalRybinski/Trion/common"
-	"github.com/MichalRybinski/Trion/common/models"
+	c "github.com/MichalRybinski/Trion/common"
+	m "github.com/MichalRybinski/Trion/common/models"
 	"fmt"
 	//"encoding/json"
 
@@ -19,6 +19,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"time"
 	"regexp"
+	"strings"
 	//"github.com/fatih/structs"
 )
 
@@ -31,25 +32,25 @@ type mongoDBHandler struct {
 
 var MongoDBHandler mongoDBHandler
 
-func (mh *mongoDBHandler) MongoDBInit(appConfig *common.AppConfig) {
+func (mh *mongoDBHandler) MongoDBInit(appConfig *c.AppConfig) {
 	
-	mh.MongoSystemDB = mh.MongoClient.Database(common.SysDBName)
+	mh.MongoSystemDB = mh.MongoClient.Database(c.SysDBName)
 	//for mongodb DB & collection will be created with first insert to collection
 	mh.MongoProjectsDB = mh.MongoSystemDB.Collection(appConfig.DBConfig.MongoConfig.ProjectsColl)
 	users, err := mh.initSystemUsers()
 	fmt.Println("== init, users: ",users)
 	//check if system project "trion" already exists before inserting anything
-	itemsMap, err := mh.GetDocs(common.SysDBName, 
+	itemsMap, err := mh.GetDocs(c.SysDBName, 
 		appConfig.DBConfig.MongoConfig.ProjectsColl, 
 		bson.M{"name":"trion"})
 	if err != nil {
-		if _, ok := err.(common.NotFoundError); !ok { log.Fatal(err) }
+		if _, ok := err.(c.NotFoundError); !ok { log.Fatal(err) }
 		fmt.Println("To był not found, len(itemsMap)",len(itemsMap))
 	}
 	now := time.Now()
 	if len(itemsMap) == 0 {
 		fmt.Println("Inserting Trion...")
-		mh.InsertOne(common.SysDBName,
+		mh.InsertOne(c.SysDBName,
 			appConfig.DBConfig.MongoConfig.ProjectsColl,
 			bson.M{"name" : "trion", 
 			"type" : "system", 
@@ -61,30 +62,31 @@ func (mh *mongoDBHandler) MongoDBInit(appConfig *common.AppConfig) {
 	}
 	initSysIndexes(mh.MongoProjectsDB,sysProjIndexModels)
 	initSysIndexes(mh.MongoProjectsDB,userIndexModels)
+	initSysIndexes(mh.MongoClient.Database(c.UsersDBName).Collection(c.UsersDBAuthCollection),authIndexModels)
 }
 
 func (mh *mongoDBHandler) initSystemUsers() ([]map[string]interface{}, error) {
 	var err error
-	var sysAdmin models.UserDBModel
+	var sysAdmin m.UserDBModel
 	var now time.Time
 	var hashedPassword []byte
 	// check if default system admin exists
-	itemsMap, err := mh.GetDocs(common.SysDBName, common.DBUsersCollectionName, bson.M{"login":"sysadmin"})
+	itemsMap, err := mh.GetDocs(c.UsersDBName, c.UsersDBUsersCollection, bson.M{"login":"sysadmin"})
 	if err !=nil { 
-		if _, ok := err.(common.NotFoundError); !ok { goto Done }
+		if _, ok := err.(c.NotFoundError); !ok { goto Done }
 	}
 	if len(itemsMap) == 0 {
 		//insert default admin user
 		hashedPassword, err = bcrypt.GenerateFromPassword([]byte("sysadmin"), 12)
 		if err != nil {goto Done}
 		now = time.Now()
-		sysAdmin = models.UserDBModel{
+		sysAdmin = m.UserDBModel{
 			Login: "sysadmin",
 			Hash: string(hashedPassword),
 			CreatedAt: now,
 			UpdatedAt: now,
 		}
-		if itemsMap, err = mh.InsertOne(common.SysDBName, common.DBUsersCollectionName, sysAdmin); err != nil { goto Done }
+		if itemsMap, err = mh.InsertOne(c.UsersDBName, c.UsersDBUsersCollection, sysAdmin); err != nil { goto Done }
 	}
 	Done:
 	return itemsMap, err
@@ -93,7 +95,7 @@ func (mh *mongoDBHandler) initSystemUsers() ([]map[string]interface{}, error) {
 
 func ConvertStringIDToObjID(stringID string) (primitive.ObjectID, error) {
 	oid, err := primitive.ObjectIDFromHex(stringID)
-	if err != nil { err = common.InvalidIdError{stringID} } //Maybe wrap original error?
+	if err != nil { err = c.InvalidIdError{stringID} } //Maybe wrap original error?
 	return oid, err
 }
 // returns slice of acquired docs or error
@@ -106,7 +108,7 @@ func (mh *mongoDBHandler) GetDocs(dbname string,
 	var itemsMap []map[string]interface{}
 	//unify filter before passing to actual query
 	var parsedFilter = map[string]interface{}{}
-	parsedFilter = common.ConvertInterfaceToMapStringInterface(filter)
+	parsedFilter = c.ConvertInterfaceToMapStringInterface(filter)
 	// check if "_id" is part of filter, convert accordingly
 	if _, ok := parsedFilter["_id"]; ok {
 		parsedFilter["_id"], err = ConvertStringIDToObjID(parsedFilter["_id"].(string))
@@ -131,7 +133,7 @@ func (mh *mongoDBHandler) InsertOne(dbname string,
 	collection := db.Collection(collectionname)
 	
 	var insDoc = map[string]interface{}{}
-	insDoc = common.ConvertInterfaceToMapStringInterface(doc)
+	insDoc = c.ConvertInterfaceToMapStringInterface(doc)
 	// check if "_id" is part of request, convert accordingly
 	if _, ok := insDoc["_id"]; ok {
 		insDoc["_id"], err = ConvertStringIDToObjID(insDoc["_id"].(string))
@@ -153,7 +155,7 @@ func (mh *mongoDBHandler) InsertOne(dbname string,
 		} else { 
 			//v, _ := err.(type)
 			hasDupEntry, msgToPass := containsWriteErrDupEntry(err)
-			if hasDupEntry { err = common.ItemAlreadyExistsError{msgToPass} }
+			if hasDupEntry { err = c.ItemAlreadyExistsError{msgToPass} }
 		}
 	}
 	fmt.Printf("InsertOne: ItemsMap: %s\n InsertOne: err: %s\n",itemsMap,err) 
@@ -211,7 +213,7 @@ func (mh *mongoDBHandler) DeleteDoc(dbname string,
 	var res *mongo.DeleteResult
 	//unify filter before passing to actual query
 	var parsedFilter = map[string]interface{}{}
-	parsedFilter=common.ConvertInterfaceToMapStringInterface(filter)
+	parsedFilter=c.ConvertInterfaceToMapStringInterface(filter)
 	// check if "_id" is part of filter, convert accordingly
 	if _, ok := parsedFilter["_id"]; ok {
 		parsedFilter["_id"], err = ConvertStringIDToObjID(parsedFilter["_id"].(string))
@@ -225,7 +227,7 @@ func (mh *mongoDBHandler) DeleteDoc(dbname string,
 	res, err = collection.DeleteOne(context.TODO(), parsedFilter)
 	fmt.Printf("== DeleteDoc, deleted %v documents\n", res.DeletedCount)
 	if res.DeletedCount == 0 {
-		err = common.NotFoundError{ fmt.Sprintf( "not found _id : %s", parsedFilter["_id"].(primitive.ObjectID).Hex() ) }
+		err = c.NotFoundError{ fmt.Sprintf( "not found: %s", parsedFilter) }
 	}
 	Done:
 	return itemsMap, err
@@ -243,7 +245,7 @@ func (mh *mongoDBHandler) UpdateDoc(dbname string,
 	var res *mongo.UpdateResult
 	//unify filter before passing to actual query
 	var parsedFilter = map[string]interface{}{}
-	parsedFilter=common.ConvertInterfaceToMapStringInterface(filter)
+	parsedFilter=c.ConvertInterfaceToMapStringInterface(filter)
 	// check if "_id" is part of filter, convert accordingly
 	if _, ok := parsedFilter["_id"]; ok {
 		parsedFilter["_id"], err = ConvertStringIDToObjID(parsedFilter["_id"].(string))
@@ -264,7 +266,7 @@ func (mh *mongoDBHandler) UpdateDoc(dbname string,
 		itemsMap, err = mh.getDocs(dbname,collectionname,parsedFilter)
 		fmt.Printf("Updated existing document %v\n for filter %v\n", itemsMap, parsedFilter)
 	} else {
-		err = common.NotFoundError{ fmt.Sprintf( "not found _id : %s", parsedFilter["_id"].(primitive.ObjectID).Hex() ) }
+		err = c.NotFoundError{ fmt.Sprintf( "not found _id : %s", parsedFilter["_id"].(primitive.ObjectID).Hex() ) }
 		fmt.Printf("No document updated for filter %v\n", parsedFilter)
 	}
 	Done:
@@ -313,6 +315,12 @@ var userIndexModels = []mongo.IndexModel{
 			Options: options.Index().SetUnique(true),
 	},
 }
+var authIndexModels = []mongo.IndexModel{
+	{
+			Keys:    bson.D{{"uuid", 1}},  	// small probability for non-unique entry, just to be on safe side
+			Options: options.Index().SetUnique(true),
+	},
+}
 
 // private
 // if err returned from mongo write operation contains duplicate entry
@@ -322,6 +330,7 @@ func containsWriteErrDupEntry(err error) (bool, string) {
 	containsDup := false
 	var errMsg string
 	if v, ok := err.(mongo.WriteException); ok {
+		var msgs []string
 		for idx, werr:=range v.WriteErrors {
 			//log stuff before anything gets altered
 			fmt.Println("err.WriteErrors[",idx,"].Index=",werr.Index)
@@ -332,10 +341,14 @@ func containsWriteErrDupEntry(err error) (bool, string) {
 				containsDup = true
 				// get the dup key msg
 				pat := regexp.MustCompile(`({)(.*?)(})`)
-				errMsg = pat.FindString(werr.Message)
-				break;
+				msgs = append(msgs,pat.FindString(werr.Message))
 			}
 		}
+		fmt.Println("-- ",msgs)
+		//errMsg = c.Lines2JSONString(&msgs)
+		errMsg = strings.Join(msgs,",")
+		fmt.Println("--1 ",errMsg)
 	}
+	fmt.Println("--2 ",errMsg)
   return containsDup,errMsg
 }

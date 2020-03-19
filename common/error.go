@@ -80,7 +80,7 @@ func newError(statusCode int, err error, format string, args ...interface{}) HTT
 	if format == "" {
 		format = http.StatusText(statusCode)
 	}
-
+	fmt.Println(args...)
 	desc := fmt.Sprintf(format, args...)
 	if err == nil {
 		err = errors.New(desc)
@@ -121,7 +121,7 @@ func Fail(ctx iris.Context, statusCode int, err error, format string, args ...in
 func FailJSON(ctx iris.Context, statusCode int, err error, format string, args ...interface{}) HTTPError {
 	httpErr := newError(statusCode, err, format, args...)
 	errD, _ := httpErr.Details.MarshalJSON()
-	fmt.Println(string(errD))
+	fmt.Println("FailJSON, errD: ",string(errD))
 	httpErr.writeHeaders(ctx)
 	fmt.Println("FailJSON: before ctx.JSON")
 	ctx.JSON(httpErr)
@@ -144,30 +144,48 @@ func InternalServerErrorJSON(ctx iris.Context, err error, format string, args ..
 
 // bad request after validating payload response helper
 func BadRequestAfterJSchemaValidationResponse(ctx iris.Context, result *gojsonschema.Result) {
-	httpErr := FailJSON(ctx,iris.StatusBadRequest,fmt.Errorf("Invalid request structure"),"%s",JSONSchemaValidationErrorsToString(result))
+	var msg=""
+	if result != nil { msg = JSONSchemaValidationErrorsToString(result)}
+	httpErr := FailJSON(ctx,iris.StatusBadRequest,fmt.Errorf("Invalid request structure"),"%s",msg)
 	LogFailure(os.Stderr, ctx, httpErr)
 }
 
 //general bad request after some error
 func BadRequestAfterErrorResponse(ctx iris.Context, err error) {
-	httpErr := FailJSON(ctx,iris.StatusBadRequest,err,"%v",err.Error())
+	var msg=""
+	if err != nil { msg = err.Error()}
+	httpErr := FailJSON(ctx,iris.StatusBadRequest,err,"%v",msg)
 	LogFailure(os.Stderr, ctx, httpErr)
 }
 
 //general not found after some error
 func NotFoundAfterErrorResponse(ctx iris.Context, err error) {
-	httpErr := FailJSON(ctx,iris.StatusNotFound,err,"%v",err.Error())
+	var msg=""
+	if err != nil { msg = err.Error()}
+	httpErr := FailJSON(ctx,iris.StatusNotFound,err,"%v",msg)
 	LogFailure(os.Stderr, ctx, httpErr)
 }
 
-//conflict 409 if another instance fo resource exists
+//conflict 409 if another instance of resource exists
 func ConflictAfterErrorResponse(ctx iris.Context, err error) {
-	httpErr := FailJSON(ctx,iris.StatusConflict,err,"%v",err.Error())
+	var msg=""
+	if err != nil { msg = err.Error()}
+	httpErr := FailJSON(ctx,iris.StatusConflict,err,"%v",msg)
 	LogFailure(os.Stderr, ctx, httpErr)
 }
 // classic 401
 func UnauthorizedResponse(ctx iris.Context, err error) {
-	httpErr := FailJSON(ctx,iris.StatusUnauthorized,err,"%v",err.Error())
+	var msg=""
+	if err != nil { msg = err.Error()}
+	httpErr := FailJSON(ctx,iris.StatusUnauthorized,err,"%v",msg)
+	LogFailure(os.Stderr, ctx, httpErr)
+}
+
+// classic 403
+func ForbiddenResponse(ctx iris.Context, err error) {
+	var msg=""
+	if err != nil { msg = err.Error()}
+	httpErr := FailJSON(ctx,iris.StatusForbidden,err,"%v",msg)
 	LogFailure(os.Stderr, ctx, httpErr)
 }
 
@@ -177,6 +195,7 @@ func APIErrorSwitch(ctx iris.Context, err error, additionalMsg string) {
 		case InvalidIdError: BadRequestAfterErrorResponse(ctx,err)
 		case NotFoundError: NotFoundAfterErrorResponse(ctx,err)
 		case ItemAlreadyExistsError: ConflictAfterErrorResponse(ctx,err)
+		case UnauthorizedError: UnauthorizedResponse(ctx,err)
 		default: InternalServerErrorJSON(ctx, err, "%v", err.Error()) // general 500 error			
 	}
 }
@@ -184,7 +203,7 @@ func APIErrorSwitch(ctx iris.Context, err error, additionalMsg string) {
 type ItemAlreadyExistsError struct {
 	Item string
 }
-func (e ItemAlreadyExistsError) Error() string { return e.Item + " : already exists" }
+func (e ItemAlreadyExistsError) Error() string { return e.Item }
 
 type InvalidIdError struct {
 	Id string
@@ -204,7 +223,7 @@ func (e NotSupportedDBError) Error() string { return e.DBType + " : not supporte
 type UnauthorizedError struct {
 	Info string
 }
-func (e UnauthorizedError) Error() string { return e.Info + " : invalid" }
+func (e UnauthorizedError) Error() string { return e.Info }
 
 type InvalidParametersError struct {
 	Parameters map[string]interface{}

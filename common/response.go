@@ -10,7 +10,7 @@ import (
 )
 
 type HTTPResponse struct {
-	When        time.Time `json:"-"` // the time that the error occurred.
+	When        time.Time `json:"-"` // the time that the response was created.
 	StatusCode int `json:"statusCode"`
 	//  it's the message of the response.
 	Details *json.RawMessage `json:"details"`
@@ -34,12 +34,6 @@ func newResponse(statusCode int, format string, args ...interface{}) HTTPRespons
 		statusCode,
 		details,
 	}
-}
-
-func SliceMapToJSONString(itemsMap []map[string]interface{} ) string {
-	j, _:= json.Marshal(itemsMap)
-	res := string(j)
-	return res
 }
 
 // StatusJSON will send to the client the response data as JSON.

@@ -12,7 +12,7 @@ import (
 	"fmt"
 	//"encoding/json"
 
-	"github.com/MichalRybinski/Trion/common"
+	c "github.com/MichalRybinski/Trion/common"
 )
 
 type DataStoreService interface {
@@ -20,6 +20,7 @@ type DataStoreService interface {
 	Update(ctx context.Context, filter interface{}, updateReq map[string]interface{}, dbData map[string]interface{}) ([]map[string]interface{}, error)
 	Read(ctx context.Context, filter interface{}, dbData map[string]interface{}) ([]map[string]interface{}, error)
 	Delete(ctx context.Context, filter interface{}, dbData map[string]interface{}) ([]map[string]interface{}, error)
+	IsTokenNotRecalled(ctx context.Context, uid string, uuid string) (bool, error)
 }
 
 type dataStoreService struct {
@@ -34,7 +35,7 @@ func NewDataStoreService(dbType string) (DataStoreService, error) {
 	switch dbType {
 		// add psql in future here - with fallthrough
 		case "mongodb": dss = dataStoreService{dbtype: dbType}
-		case "default" : err = common.NotSupportedDBError{dbType}
+		case "default" : err = c.NotSupportedDBError{dbType}
 	}
 	return &dss, err
 }
@@ -56,7 +57,7 @@ func (dss *dataStoreService)Create(ctx context.Context, createReq map[string]int
 			default:
 		}
 	} else {
-		err = common.InvalidParametersError{dbData}
+		err = c.InvalidParametersError{dbData}
 	}
 	fmt.Printf("DSS Create, itemsMap: %v err: %v \n",itemsMap, err)
 	return itemsMap, err
@@ -78,7 +79,7 @@ func (dss *dataStoreService)Read(ctx context.Context, filter interface{}, dbData
 			default:
 		}
 	}	else {
-		err = common.InvalidParametersError{dbData}
+		err = c.InvalidParametersError{dbData}
 	}
 
 	return itemsMap, err
@@ -100,7 +101,7 @@ func (dss *dataStoreService)Update(ctx context.Context, filter interface{}, upda
 			default:
 		}
 	}	else {
-		err = common.InvalidParametersError{dbData}
+		err = c.InvalidParametersError{dbData}
 	}
 
 	return itemsMap, err
@@ -121,8 +122,33 @@ func (dss *dataStoreService)Delete(ctx context.Context, filter interface{}, dbDa
 			default:
 		}
 	}	else {
-		err = common.InvalidParametersError{dbData}
+		err = c.InvalidParametersError{dbData}
 	}
 
 	return itemsMap, err
+}
+
+func (dss *dataStoreService)IsTokenNotRecalled(ctx context.Context, uid string, uuid string) (bool, error) {
+	var itemsMap []map[string]interface{}
+	var err error
+	var res = false
+	switch dss.dbtype {
+		case "mongodb": {
+			filter := map[string]interface{}{
+				"userId" : uid,
+				"uuid" : uuid,
+			}
+			itemsMap, err = MongoDBHandler.GetDocs(c.UsersDBName, 
+				c.UsersDBAuthCollection,
+				filter)
+			if err != nil {/* log? */}
+		}
+		default:
+	}
+	if err == nil && len(itemsMap) > 0 { 
+		/*log*/ res = true
+	} else if err == nil && len(itemsMap) < 1 {
+		err = c.UnauthorizedError{"Token is recalled"}
+	}
+	return res, err
 }

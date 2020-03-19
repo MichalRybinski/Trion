@@ -9,12 +9,13 @@ import (
 
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/hero"
+	"github.com/iris-contrib/middleware/jwt"
 	//"github.com/kataras/iris/context"
 	//"github.com/kataras/iris/middleware/logger"
 	//"github.com/kataras/iris/middleware/recover"
 	//"Trion/repository"
 	"github.com/MichalRybinski/Trion/API"
-	"github.com/MichalRybinski/Trion/common"
+	c "github.com/MichalRybinski/Trion/common"
 	"github.com/MichalRybinski/Trion/repository"
 	"context"
 	"log"
@@ -32,10 +33,11 @@ func registerErrors(app *iris.Application) {
 }
 
 func registerApiRoutes(app *iris.Application) {
-	dss, err := repository.NewDataStoreService(common.ThisAppConfig.DBConfig.DBType)
+	dss, err := repository.NewDataStoreService(c.TrionConfig.DBConfig.DBType)
 	if err != nil {
 		return
 	}
+	j:= initJWTMiddleware()
 	apiMiddleware := func(ctx iris.Context) {
 		ctx.Next()
 	}
@@ -43,6 +45,7 @@ func registerApiRoutes(app *iris.Application) {
 	// and middleware, i.e: "/api" and apiMiddleware.
 	api := app.Party("/api", apiMiddleware)
 	{ // braces are optional of course, it's just a style of code
+		auth := API.NewAuthHandler(dss)
 		v1 := api.Party("/v1")
 		projects := v1.Party("/projects")
 		{
@@ -50,15 +53,29 @@ func registerApiRoutes(app *iris.Application) {
 			projects.Get("/", psHandler.GetAll)
 			projects.Post("/", psHandler.Create)
 			// hero handlers for path parameters
-			projects.Delete("/{id:string}", hero.Handler(psHandler.DeleteById))
+			projects.Delete("/{id:string}", j.Serve, auth.AllowAccess, hero.Handler(psHandler.DeleteById))
 			projects.Put("/{id:string}", hero.Handler(psHandler.UpdateById))
 			projects.Get("/{id:string}", hero.Handler(psHandler.GetById))
 		}
 		usHandler := API.NewUserService(dss)
 		v1.Post("/{projName:string}/signin", hero.Handler(usHandler.SignIn))
 		v1.Post("/signin", hero.Handler(usHandler.SignIn))
+		v1.Post("/{projName:string}/signout", j.Serve, auth.AllowAccess, hero.Handler(usHandler.SignOut))
+		v1.Post("/signout", j.Serve, auth.AllowAccess, hero.Handler(usHandler.SignOut))
 	}
 }
+
+func initJWTMiddleware() *jwt.Middleware {
+		j := jwt.New(jwt.Config{
+				ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+						return []byte(c.TrionConfig.SecretKey), nil
+				},
+				SigningMethod: jwt.SigningMethodHS256,
+				ErrorHandler: c.OnJWTError,
+		})
+		return j
+}
+
 
 func registerSubdomains(app *iris.Application) {
 	mysubdomain := app.Party("mysubdomain.")
@@ -102,12 +119,12 @@ func h(ctx iris.Context) {
 
 
 func main() {
-	switch common.ThisAppConfig.DBConfig.DBType {
+	switch c.TrionConfig.DBConfig.DBType {
 		case "mongodb": {
 			var err error
 			//initiate client & connection, connection pool handled by driver
 			//keep it active until program is terminated
-			repository.MongoDBHandler.MongoClientOptions = options.Client().ApplyURI(common.ThisAppConfig.DBConfig.MongoConfig.URL)
+			repository.MongoDBHandler.MongoClientOptions = options.Client().ApplyURI(c.TrionConfig.DBConfig.MongoConfig.URL)
 			repository.MongoDBHandler.MongoClient, err = mongo.Connect(context.Background(), 
 				repository.MongoDBHandler.MongoClientOptions)
 			if err != nil {
@@ -118,12 +135,12 @@ func main() {
 				log.Fatal(err)
 			}
 			defer repository.MongoDBHandler.MongoClient.Disconnect(context.TODO())
-			repository.MongoDBHandler.MongoDBInit(common.ThisAppConfig)
+			repository.MongoDBHandler.MongoDBInit(c.TrionConfig)
 		}
 		default:
 	}
 	app := newApp()
 	app.Logger().SetLevel("debug")
-	app.Run(iris.Addr(":" + common.ThisAppConfig.ServerConfig.PORT), 
+	app.Run(iris.Addr(":" + c.TrionConfig.ServerConfig.PORT), 
 		iris.WithoutServerError(iris.ErrServerClosed))
 }
